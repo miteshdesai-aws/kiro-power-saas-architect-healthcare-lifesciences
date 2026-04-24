@@ -4,7 +4,7 @@ displayName: "SaaS Architect for Healthcare on AWS"
 description: "AI co-architect for multi-tenant healthcare SaaS on AWS — tenancy, PHI isolation, FHIR, HIPAA/HITRUST, and Well-Architected reviews."
 keywords: ["healthcare", "hipaa", "phi", "fhir", "healthlake", "healthimaging", "dicom", "hitrust", "telehealth", "patient portal", "ehr", "medical imaging", "claims", "payer", "rcm", "clinical", "smart on fhir", "baa", "hl7", "42 cfr part 2", "samd", "gxp", "21 cfr part 11", "annex 11", "gamp 5", "iec 62304", "validation", "electronic signature", "iq oq pq", "eclinical", "pharmacovigilance", "pccp"]
 version: "1.0.0"
-author: "AWS Healthcare SaaS Consultant"
+author: "Mitesh Desai, Anand Jumnani"
 ---
 
 # SaaS Architect for Healthcare on AWS
