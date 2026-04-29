@@ -27,6 +27,9 @@ The Cost Attribution Strategy's metering dimensions should align with the Tierin
 **SaaS Lens Review Report ↔ Everything:**
 The Review Report may reference gaps that other artifacts would fill. For example, a finding of "no documented isolation strategy" naturally leads to generating a Tenant Isolation Matrix. When generating a Review Report, note which artifacts would address which findings in the roadmap section.
 
+**High-Level Design ↔ Everything:**
+The HLD is the top-level synthesis artifact. It references every other artifact for detail rather than duplicating content. Generate the HLD early to establish the system view, then produce detail artifacts (Isolation Matrix, PHI Flow Map, ADRs, etc.) to deepen specific sections. When an HLD exists in the workspace, every other artifact should cross-reference it so readers can navigate from system view to detail and back.
+
 **General rule:** When generating an artifact and a related artifact already exists in the workspace, read it first and reference it rather than duplicating content. If the existing artifact is outdated based on the current conversation, offer to update it.
 
 
@@ -83,7 +86,335 @@ Product: {product name}
 - When the user asks "what should our isolation look like?"
 - When doing an architecture review and documenting current state
 
-## Artifact 2: Architecture Decision Record (ADR)
+## Artifact 2: High-Level Design (HLD)
+
+The HLD is the top-level synthesis artifact — a single system view that ties together the specialized artifacts (Isolation Matrix, PHI Flow Map, ADRs, etc.) into a coherent architecture document. It answers "what does the whole system look like?" for audiences that need the system view before they dig into detail: enterprise customer security teams, compliance reviewers, new engineers joining the team, auditors, and (for GxP) validation reviewers.
+
+**Think of HLD as the doorway; specialized artifacts are the detail behind the door.** The HLD should reference other artifacts for depth, not duplicate their content.
+
+For GxP-regulated systems, the HLD serves as the "System Description" document required by `gxp-compliance-generic.md`. The GxP variant includes additional sections for safety classification, GAMP 5 categorization summary, and validation scope.
+
+### Template
+
+```markdown
+# High-Level Design
+
+**Product:** {product name}
+**Date:** {date}
+**Version:** {version}
+**Segment:** {digital health/telehealth | EHR-adjacent/clinical workflow | clinical SaaS/imaging | payer tech}
+**Regulatory Scope:** {HIPAA} + {HITRUST | 42 CFR Part 2 | FDA/SaMD | GxP | none}
+**Authors:** {names}
+
+## 1. Executive Summary
+
+{One paragraph, 4-6 sentences: what the product does, who uses it, what problem it solves, the key architectural choices (tenancy model, primary AWS services, compliance posture), and any notable constraints. This is what a busy executive or security reviewer reads first.}
+
+## 2. System Context
+
+### Users and Personas
+| Persona | Description | Authentication | Primary Use Cases |
+|---------|-------------|---------------|-------------------|
+| {e.g., Clinician} | {description} | {SAML from health system IdP / Cognito / SMART on FHIR} | {what they do} |
+| {e.g., Patient} | {description} | {Cognito + MFA} | {what they do} |
+| {e.g., Org Admin} | {description} | {Cognito + MFA} | {what they do} |
+
+### External Systems
+| System | Integration Type | Protocol | Direction |
+|--------|-----------------|----------|-----------|
+| {e.g., Epic EHR} | {SMART on FHIR} | {HTTPS, OAuth 2.0} | {Bidirectional} |
+| {e.g., Hospital PACS} | {DICOM} | {DICOMweb / DIMSE over VPN} | {Inbound studies, outbound results} |
+| {e.g., Clearinghouse} | {EDI} | {SFTP / AS2} | {Inbound claims, outbound remittances} |
+
+### Regulatory Scope
+- **HIPAA:** {how it applies — covered entity tenants, business associate tenants, or both}
+- **{Additional regulation}:** {why it applies and key implications}
+- **Out of scope:** {regulations explicitly not applicable and why}
+
+## 3. Logical Architecture
+
+### Components and Responsibilities
+| Component | Responsibility | Tenancy Model | Key Dependencies |
+|-----------|---------------|---------------|------------------|
+| {Control Plane} | {Tenant mgmt, identity, billing, onboarding} | Shared (always) | Cognito, DynamoDB, EventBridge |
+| {Application Plane — Service A} | {description} | {Pool/Bridge/Silo} | {services} |
+| {Application Plane — Service B} | {description} | {Pool/Bridge/Silo} | {services} |
+
+### Control Plane / Application Plane Boundary
+{Describe the split per SBT patterns. What lives in the control plane (always shared) and what lives in the application plane (tenancy varies). How they communicate — EventBridge, direct API, etc.}
+
+### Multi-Tenant Model Summary
+{One paragraph summarizing the tenancy approach. Reference the Tenant Isolation Matrix for per-service detail.}
+
+→ See [Tenant Isolation Matrix](./tenant-isolation-matrix.md) for per-service tenancy decisions.
+
+## 4. Physical Architecture on AWS
+
+### Architecture Diagram
+
+{Mermaid diagram showing the deployed system. Use `graph TD` or `graph LR`. Include: user entry points, CloudFront/API Gateway, compute (Lambda/ECS/EKS), data stores (DynamoDB/RDS/S3/HealthLake/HealthImaging), observability (CloudTrail/CloudWatch), and key integrations. Annotate tenancy model per component.}
+
+Example structure:
+```mermaid
+graph TD
+    Users[Users] -->|HTTPS| CF[CloudFront]
+    CF --> APIGW[API Gateway<br/>Usage Plans per Tier]
+    APIGW -->|JWT + Tenant Context| Lambda[Lambda<br/>Pool]
+    Lambda -->|Per-tenant CMK| DDB[(DynamoDB<br/>Bridge)]
+    Lambda -->|Per-tenant data store| HL[(HealthLake<br/>Silo)]
+    Lambda -.->|CloudTrail data events| Audit[S3 Audit Logs<br/>Object Lock 7yr]
+```
+
+### AWS Account Structure
+| Account | Purpose | OU |
+|---------|---------|----|
+| {Management} | {AWS Organizations root} | - |
+| {Log Archive} | {Centralized audit logs} | Security |
+| {Shared Services} | {Control plane} | Infrastructure |
+| {Production} | {Application plane} | Workload |
+| {Staging, Dev} | {Non-production} | Workload |
+
+{For account-per-tenant silo model, add tenant OU structure. Reference `resilience-and-deployment.md` Organizations pattern.}
+
+### Regions and Data Residency
+- **Primary region:** {region and rationale}
+- **DR region:** {region and RPO/RTO}
+- **Data residency constraints:** {EU customer data in EU regions, state-specific requirements, etc.}
+
+### Networking Summary
+- **VPC design:** {shared VPC / VPC per tenant / bridge}
+- **Ingress:** {CloudFront + WAF, API Gateway, NLB for DICOM}
+- **Enterprise connectivity:** {PrivateLink for health systems, Direct Connect for high-volume imaging sites, VPN for lower-volume sites}
+- **Egress:** {VPC endpoints for AWS services, no public internet for PHI traffic}
+
+→ See `api-gateway-and-networking.md` steering for networking pattern detail.
+
+## 5. Key Data Flows
+
+### PHI Data Flow
+{High-level paragraph describing how PHI enters, is processed, stored, and leaves the system.}
+
+→ See [PHI Data Flow Map](./phi-data-flow-map.md) for detailed flow diagram and per-hop annotations.
+
+### Tenant Onboarding
+{One paragraph: what happens when a new tenant is created.}
+
+→ See [Onboarding Flow](./onboarding-flow.md) for step-by-step sequence.
+
+### Integration Flows (if applicable)
+- **FHIR exchange:** {EHR launch, standalone launch, backend services} → see `fhir-and-interop.md`
+- **HL7 v2 ingestion:** {how messages arrive, routing to tenants} → see `fhir-and-interop.md`
+- **DICOM ingestion:** {from modalities/PACS to HealthImaging} → see `clinical-saas-and-imaging.md`
+- **EDI processing:** {X12 transactions, clearinghouse integration} → see `payer-saas-patterns.md`
+
+## 6. Security and Compliance Posture
+
+### Tenant Isolation
+{One paragraph: the isolation philosophy — where bridge/silo/pool is used, why, and how infrastructure enforces it.}
+
+→ See [Tenant Isolation Matrix](./tenant-isolation-matrix.md) for per-service detail.
+
+### Identity and Access
+- **Identity provider:** {Cognito pattern, SAML federation for health systems, SMART on FHIR for EHR launch}
+- **Personas and auth flows:** {summary — clinician SSO, patient self-service, admin MFA}
+- **Break-the-glass:** {yes/no, link to runbook if yes}
+
+→ See `identity-and-onboarding.md` steering for identity patterns.
+
+### Encryption
+- **At rest:** {per-tenant CMK strategy for PHI, AWS-managed keys for non-PHI, key rotation policy}
+- **In transit:** {TLS 1.2+ everywhere, VPC endpoints, PrivateLink}
+
+→ See `phi-data-handling.md` steering for encryption key strategy.
+
+### Audit and Observability
+- **Infrastructure audit:** {CloudTrail management + data events, retention}
+- **Application audit:** {PHI access logging schema, consent tracking, storage}
+- **Immutability:** {S3 Object Lock Compliance Mode, retention period}
+
+→ See [Audit Log Coverage Matrix](./audit-log-coverage-matrix.md) for detail.
+
+### HIPAA Eligibility and BAA Chain
+- **AWS BAA:** {status}
+- **Subprocessor BAAs:** {summary — any non-HIPAA-eligible services in use and why it's acceptable}
+
+→ See [HIPAA Service Eligibility Matrix](./hipaa-service-eligibility-matrix.md) and [BAA Inventory](./baa-inventory.md).
+
+### Additional Compliance (as applicable)
+- **HITRUST:** {target CSF version, certification timeline} → see [HITRUST Control Inheritance Matrix](./hitrust-control-inheritance-matrix.md)
+- **42 CFR Part 2:** {consent-gated access approach for SUD data}
+- **State laws:** {CMIA, TX HB 300, NY SHIELD — summary of applicable requirements}
+- **GDPR Article 9:** {EU data residency, DPIA if applicable}
+
+## 7. Operational Characteristics
+
+### Scalability
+- **Tenant growth target:** {year 1, year 3 tenant counts}
+- **Scaling approach per component:** {auto-scaling, sharding, cell-based if applicable}
+- **Known scaling bottlenecks:** {and mitigation plans}
+
+### Availability and DR
+- **RPO/RTO per data tier:**
+  | Tier | RPO | RTO |
+  |------|-----|-----|
+  | {Clinical data stores} | {< 1 hr} | {< 4 hr} |
+  | {Non-clinical services} | {standard} | {standard} |
+- **DR strategy:** {active-active | active-passive | single-region with backups}
+- **HIPAA contingency plan:** {reference to backup, DR, emergency mode operation procedures}
+
+### Deployment
+- **CI/CD approach:** {pipeline, staged rollout, canary, blue/green}
+- **Tenancy of deployments:** {all tenants same version — SaaS principle}
+- **Rollback strategy:** {how it works, how it's tested}
+
+→ See `resilience-and-deployment.md` steering for deployment patterns.
+
+### Observability
+- **Tenant-aware logging:** {tenant_id in every log, no PHI in plaintext}
+- **Per-tenant metrics:** {approach — CloudWatch dimensions, EMF, etc.}
+- **Noisy neighbor detection:** {alerts and thresholds}
+
+→ See `observability-and-operations.md` steering for detail.
+
+## 8. Key Architectural Decisions
+
+{Summary table. Each row points to a full ADR for the rationale. This is not an ADR itself — it's the index of decisions.}
+
+| # | Decision | Date | Status | Link |
+|---|----------|------|--------|------|
+| ADR-001 | {Tenancy model per service} | {date} | Accepted | [ADR-001](./adr/ADR-001-{title}.md) |
+| ADR-002 | {Identity provider and SMART on FHIR approach} | {date} | Accepted | [ADR-002](./adr/ADR-002-{title}.md) |
+| ADR-003 | {Data partitioning per storage service} | {date} | Accepted | [ADR-003](./adr/ADR-003-{title}.md) |
+
+## 9. Open Questions and Risks
+
+### Open Questions
+| # | Question | Impact | Owner | Due |
+|---|----------|--------|-------|-----|
+| 1 | {unresolved decision or unknown} | {High/Medium/Low} | {name} | {date} |
+
+### Known Risks
+| # | Risk | Likelihood | Impact | Mitigation |
+|---|------|-----------|--------|-----------|
+| 1 | {risk description} | {H/M/L} | {H/M/L} | {current mitigation or planned action} |
+
+## 10. Related Artifacts
+
+**Always generated alongside HLD for healthcare SaaS:**
+- [Tenant Isolation Matrix](./tenant-isolation-matrix.md)
+- [HIPAA Service Eligibility Matrix](./hipaa-service-eligibility-matrix.md)
+- [PHI Data Flow Map](./phi-data-flow-map.md)
+- [BAA Inventory](./baa-inventory.md)
+
+**Generated as needed based on context:**
+- [Onboarding Flow](./onboarding-flow.md)
+- [Data Partitioning Map](./data-partitioning-map.md)
+- [Tiering Matrix](./tiering-matrix.md)
+- [Cost Attribution Strategy](./cost-attribution-strategy.md)
+- [Audit Log Coverage Matrix](./audit-log-coverage-matrix.md)
+- [Break-the-Glass Runbook](./break-the-glass-runbook.md)
+- [HITRUST Control Inheritance Matrix](./hitrust-control-inheritance-matrix.md)
+- [De-identification Strategy](./de-identification-strategy.md)
+- Individual ADRs for significant decisions
+
+**For GxP-regulated systems, additional sections (see "GxP Variant" below).**
+```
+
+### GxP Variant — Additional Sections
+
+When the system is GxP-regulated (SaMD, eClinical, pharmacovigilance, regulated labs), add these sections to the HLD:
+
+```markdown
+## 11. Software Safety Classification (IEC 62304)
+
+{For SaMD only. Classify each component.}
+
+| Component | Safety Class (A/B/C) | Rationale |
+|-----------|---------------------|-----------|
+| {component} | {class} | {what harm could occur if this component fails} |
+
+**Overall product classification:** {highest class present}
+
+## 12. GAMP 5 Categorization Summary
+
+{High-level summary. Reference the full matrix for detail.}
+
+| Category | Component Count | Validation Effort |
+|----------|----------------|-------------------|
+| Category 1 (Infrastructure) | {count} | Minimal — inherit AWS qualification |
+| Category 3 (Non-configured) | {count} | IQ/OQ |
+| Category 4 (Configured) | {count} | IQ/OQ/PQ |
+| Category 5 (Custom) | {count} | Full lifecycle validation |
+
+→ See [GAMP 5 Service Categorization Matrix](./gamp5-service-categorization-matrix.md) for detail.
+
+## 13. Validation Scope
+
+- **Validation approach:** {risk-based per GAMP 5}
+- **Qualified CI/CD pipeline:** {yes/no — if yes, pipeline is itself Category 4}
+- **Electronic signatures required:** {yes/no — which events, see E-Signature Design}
+- **PCCP for AI (if applicable):** {in place / planned / not applicable}
+
+→ See [Validation Plan](./validation-plan-{release}.md), [Traceability Matrix](./traceability-matrix-{release}.md), and [Supplier Qualification Register](./supplier-qualification-register.md).
+
+## 14. Change Control
+
+- **Change control process:** {reference to SOP}
+- **Classification:** {Standard / Normal / Major / Emergency — thresholds}
+- **CAB structure:** {for Major changes}
+
+→ See [Change Control Record Template](./change-control-record-template.md).
+```
+
+### When to Generate
+
+Generate the HLD **early in an engagement**, not at the end. The HLD is the foundational synthesis document — sketch the system view first, then go deep on specific areas via Isolation Matrix, PHI Flow Map, ADRs, etc.
+
+Specific triggers:
+- The customer describes what they're building and has at least rough answers to segment, tenancy, and AWS services
+- Before any detailed deep-dive on a specific domain (isolation, PHI, onboarding, etc.) — produce the HLD first so subsequent artifacts have a home
+- At the start of a new product or major new capability within an existing product
+- When a new engineer or compliance reviewer needs a system overview
+- When responding to enterprise customer security questionnaires or vendor reviews
+- For GxP systems: before the first regulated release, as the "System Description" validation evidence
+- During architecture review: updating an existing HLD to reflect current state
+
+### Readiness Requires
+
+Do not generate an HLD without all of these. If gaps exist, ask for them specifically (progressive discovery) before generating.
+
+- **Segment identified** — which of the four healthcare SaaS segments
+- **Regulatory scope clear** — HIPAA (assumed), plus HITRUST, 42 CFR Part 2, FDA/SaMD, GxP as applicable
+- **User personas identified** — at minimum 2-3 primary personas with authentication approach
+- **External integrations known** — which EHRs, payers, labs, devices the system connects to
+- **Component list exists** — rough list of services/components (even "API, background processor, dashboard" is enough to start)
+- **Tenancy model decided per major component** — or enough context to recommend one (Isolation Matrix exists or can be generated alongside)
+- **AWS services selected** — at least the primary ones (compute, storage, identity, FHIR/imaging if applicable)
+- **Account structure decided** — single account, multi-account, or account-per-tenant
+
+**For the GxP variant additionally:**
+- IEC 62304 safety classification complete (if SaMD)
+- GAMP 5 categorization approach agreed
+- Validation strategy decided (continuous vs point-in-time)
+
+If any of these are missing, the HLD will have gaps. Ask for them rather than filling with "TBD."
+
+### Relationship to Other Artifacts
+
+The HLD is the synthesis document. Always reference, never duplicate:
+- **Tenant Isolation Matrix** — HLD summarizes the tenancy philosophy; Isolation Matrix has per-service detail
+- **PHI Data Flow Map** — HLD shows high-level data flow; PHI Flow Map has the full journey with encryption/audit at each hop
+- **HIPAA Service Eligibility Matrix** — HLD confirms HIPAA posture; Eligibility Matrix has per-service validation
+- **BAA Inventory** — HLD references BAA chain; BAA Inventory has the full list and gaps
+- **Onboarding Flow** — HLD describes onboarding at one paragraph; Onboarding Flow has the step-by-step
+- **Audit Log Coverage Matrix** — HLD references audit approach; Audit Matrix has per-event-type detail
+- **ADRs** — HLD has a decision index; each ADR has the full rationale
+- **Data Partitioning Map** — HLD references storage approach; Data Partitioning Map has per-service key design and backup strategy
+- **For GxP:** HLD summarizes safety class and GAMP 5 categorization; full matrices have per-component detail
+
+**Updating the HLD:** When a specialized artifact is generated or updated, check whether the HLD needs to be updated to reflect the new detail. The HLD is a living document — offer to update it when architecture decisions change.
+
+## Artifact 3: Architecture Decision Record (ADR)
 
 Generate an ADR for each significant architecture decision. ADRs document the why behind decisions — critical for future team members and for audit trails.
 
@@ -163,7 +494,7 @@ Generate an ADR for each significant architecture decision. ADRs document the wh
 - Cell-based architecture adoption
 
 
-## Artifact 3: SaaS Lens Review Report
+## Artifact 4: SaaS Lens Review Report
 
 Generate this after conducting a SaaS Lens review using the saas-lens-review.md steering file.
 
@@ -242,7 +573,7 @@ Generate this after conducting a SaaS Lens review using the saas-lens-review.md 
 - When the user asks for an architecture assessment
 - When the user says "review our architecture"
 
-## Artifact 4: Onboarding Flow
+## Artifact 5: Onboarding Flow
 
 Generate a tenant onboarding sequence showing every step from signup to first use.
 
@@ -296,7 +627,7 @@ Generate a tenant onboarding sequence showing every step from signup to first us
 - After tenancy model and identity decisions are made
 
 
-## Artifact 5: Data Partitioning Map
+## Artifact 6: Data Partitioning Map
 
 Generate a per-service breakdown of storage decisions.
 
@@ -342,7 +673,7 @@ Generate a per-service breakdown of storage decisions.
 - After data partitioning discussion is complete
 - When the user asks about database design for multi-tenant
 
-## Artifact 6: Tiering Matrix
+## Artifact 7: Tiering Matrix
 
 ### Template
 
@@ -387,7 +718,7 @@ Generate a per-service breakdown of storage decisions.
 - After tiering discussion
 - When the user asks about pricing strategy mapping to infrastructure
 
-## Artifact 7: Cost Attribution Strategy
+## Artifact 8: Cost Attribution Strategy
 
 ### Template
 
@@ -449,6 +780,17 @@ These rules apply to **all** artifacts — SaaS and healthcare. The healthcare a
 4. Then generate the artifact with no gaps or placeholders.
 
 ### Required Information Per SaaS Artifact (Check Before Generating)
+
+**High-Level Design (HLD)** requires:
+- Segment identified (digital health/telehealth, EHR-adjacent, clinical SaaS, payer tech)
+- Regulatory scope clear (HIPAA + any additional: HITRUST, 42 CFR Part 2, FDA/SaMD, GxP)
+- User personas identified (minimum 2-3 primary personas with auth approach)
+- External integrations known (EHRs, payers, labs, devices)
+- Component list exists (rough is fine)
+- Tenancy model decided per major component (or will be decided alongside HLD generation)
+- AWS services selected (at least primary compute, storage, identity)
+- Account structure decided
+- For GxP variant: IEC 62304 classification complete, GAMP 5 categorization approach agreed
 
 **Tenant Isolation Matrix** requires:
 - List of services/microservices in the system
@@ -531,6 +873,7 @@ If you check readiness and find gaps:
 
 ### Naming Convention
 
+- HLD: `docs/saas-architecture/high-level-design.md` (or `high-level-design-{version}.md` for versioned releases)
 - ADRs: `docs/saas-architecture/adr/ADR-001-{title}.md`
 - Isolation Matrix: `docs/saas-architecture/tenant-isolation-matrix.md`
 - Review Report: `docs/saas-architecture/saas-lens-review-{date}.md`

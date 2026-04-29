@@ -32,13 +32,13 @@ Describe what you're building or what you need help with. No jargon required.
 ### Example Journeys
 
 **"I'm building a telehealth platform for mental health providers"**
-The agent asks about HIPAA requirements, patient/provider count, and video needs. It recommends tenancy models (bridge for session recordings, pool for scheduling), Chime SDK for HIPAA-eligible video, Cognito patterns for patient and clinician identity, and PHI encryption strategy. You walk away with a Tenant Isolation Matrix, HIPAA Service Eligibility Matrix, PHI Data Flow Map, and ADRs.
+The agent asks about HIPAA requirements, patient/provider count, and video needs. It recommends tenancy models (bridge for session recordings, pool for scheduling), Chime SDK for HIPAA-eligible video, Cognito patterns for patient and clinician identity, and PHI encryption strategy. You walk away with a High-Level Design, Tenant Isolation Matrix, HIPAA Service Eligibility Matrix, PHI Data Flow Map, and ADRs for the key decisions.
 
 **"We're building a cloud PACS with AI-assisted stroke triage"**
-The agent asks about DICOM volumes, hospital count, FDA clearance status, and on-prem integration. It recommends HealthImaging for DICOM storage, silo for large health systems, PrivateLink for hospital connectivity, and addresses FDA/SaMD deployment constraints. You walk away with an Isolation Matrix, Data Partitioning Map, and ADRs covering FDA-regulated CI/CD.
+The agent asks about DICOM volumes, hospital count, FDA clearance status, and on-prem integration. It recommends HealthImaging for DICOM storage, silo for large health systems, PrivateLink for hospital connectivity, and addresses FDA/SaMD deployment constraints. You walk away with a High-Level Design (GxP variant with safety classification and GAMP 5 summary), Isolation Matrix, Data Partitioning Map, and ADRs covering FDA-regulated CI/CD.
 
 **"Review our healthcare SaaS architecture for HIPAA compliance"**
-The agent walks you through a combined SaaS Lens + Healthcare Industry Lens assessment. It checks PHI isolation, BAA coverage, audit logging, encryption, onboarding automation, and cost visibility. You walk away with a Review Report with findings ranked by severity and a phased roadmap.
+The agent walks you through a combined SaaS Lens + Healthcare Industry Lens assessment. It checks PHI isolation, BAA coverage, audit logging, encryption, onboarding automation, and cost visibility. You walk away with a Review Report with findings ranked by severity and a phased roadmap. If no HLD exists, the agent offers to produce one as the baseline for the review.
 
 ## Agent Behavior Guidelines
 
@@ -98,7 +98,7 @@ If you're unsure whether GxP applies, ask one clarifying question: "Does your so
 | SaaS Builder Toolkit, CDK, SBT control plane | `sbt-toolkit.md` |
 | API Gateway, tenant routing, VPC, PrivateLink, DICOM routing | `api-gateway-and-networking.md` |
 | Architecture review, Well-Architected, SaaS Lens, Healthcare Lens | `saas-lens-review.md` |
-| Generate SaaS artifacts (Isolation Matrix, ADR, Onboarding, Tiering, Cost) | `artifacts-saas.md` |
+| Generate SaaS artifacts (HLD, Isolation Matrix, ADR, Onboarding, Tiering, Cost) | `artifacts-saas.md` |
 | Generate healthcare artifacts (HIPAA Eligibility, PHI Flow, BAA, Audit, HITRUST, De-ID, Break-the-Glass) | `artifacts-healthcare.md` (also load `artifacts-saas.md` for shared readiness rules) |
 | Generate GxP artifacts (GAMP 5 Categorization, Validation Plan, Traceability Matrix, Supplier Qualification, E-Signature Design, Change Control) | `artifacts-healthcare.md` + `gxp-compliance-generic.md` |
 | HIPAA, BAA, HITRUST, state laws, 42 CFR Part 2, regulatory | `healthcare-compliance-foundations.md` |
@@ -136,7 +136,16 @@ If you're unsure whether GxP applies, ask one clarifying question: "Does your so
 
 ### Artifact Generation
 
-After key decisions, proactively offer to generate ONE artifact at a time. Wait for the customer to review and confirm before offering the next. Artifacts reference each other — generate foundational ones first (Isolation Matrix, HIPAA Eligibility Matrix) before dependent ones (PHI Data Flow Map, Onboarding Flow). Load `artifacts-saas.md` for core SaaS artifact templates and shared readiness rules; load `artifacts-healthcare.md` when generating healthcare-specific artifacts (it inherits the readiness rules from `artifacts-saas.md`, so load both together for healthcare work).
+After key decisions, proactively offer to generate ONE artifact at a time. Wait for the customer to review and confirm before offering the next. Artifacts reference each other — the **High-Level Design (HLD)** is the top-level synthesis artifact and should be offered early in the engagement, once segment, tenancy, and primary AWS services are known. Specialized artifacts (Isolation Matrix, PHI Flow Map, ADRs, etc.) deepen specific sections of the HLD; they are the detail behind the doorway. Load `artifacts-saas.md` for core SaaS artifact templates (including HLD) and shared readiness rules; load `artifacts-healthcare.md` when generating healthcare-specific artifacts (it inherits the readiness rules from `artifacts-saas.md`, so load both together for healthcare work).
+
+**Preferred artifact sequencing for a new engagement:**
+1. Offer the **HLD** first, once you have enough context to generate it (segment, regulatory scope, personas, tenancy, AWS services, account structure). The HLD establishes the system view.
+2. Then offer foundational detail artifacts: **Tenant Isolation Matrix** and **HIPAA Service Eligibility Matrix**.
+3. Then dependent artifacts as context grows: **PHI Data Flow Map**, **Onboarding Flow**, **Data Partitioning Map**, **Audit Log Coverage Matrix**, **BAA Inventory**.
+4. Generate **ADRs** as significant decisions get made throughout the conversation; each ADR is referenced from the HLD's decision index.
+5. For GxP systems: after HLD, add **GAMP 5 Service Categorization Matrix**, then **Validation Plan**, **Traceability Matrix**, **Supplier Qualification Register**, **Electronic Signature Design**, **Change Control Record Template** as applicable.
+
+If the customer jumps straight to a detail artifact ("can you generate the isolation matrix?"), produce that — but note that an HLD is the natural parent document and offer it as the next step.
 
 **Generation flow:**
 1. Offer one specific artifact: "Want me to generate a Tenant Isolation Matrix documenting these decisions?"
@@ -194,6 +203,7 @@ Reference snippets exist in the steering files (`phi-data-handling.md`, `audit-l
 When artifacts or responses benefit from a visual representation (data flow, sequence of operations, architecture overview, entity relationships, state machines), use **Mermaid** diagrams embedded in markdown. Mermaid renders natively in most markdown viewers (GitHub, VS Code, Kiro) and is version-control friendly — no binary image files.
 
 **When to use diagrams:**
+- High-Level Design artifact — use a Mermaid `graph TD` or `graph LR` for the physical architecture on AWS, showing user entry points, compute, data stores, observability, and integrations with tenancy model annotations
 - PHI Data Flow Map artifact — use a Mermaid flowchart showing PHI ingress → processing → storage → egress with encryption/audit annotations at each hop
 - Onboarding Flow artifact — use a Mermaid sequence diagram showing the step-by-step provisioning sequence
 - Tenant Isolation Matrix artifact — can include a Mermaid graph showing tenancy model per service
@@ -225,7 +235,7 @@ flowchart LR
 
 **Never batch-generate multiple artifacts.** Each one deserves the customer's attention and may need adjustment before the next one builds on it.
 
-**SaaS artifacts:** Tenant Isolation Matrix, ADR, SaaS Lens Review Report, Onboarding Flow, Data Partitioning Map, Tiering Matrix, Cost Attribution Strategy
+**SaaS artifacts:** High-Level Design (HLD), Tenant Isolation Matrix, ADR, SaaS Lens Review Report, Onboarding Flow, Data Partitioning Map, Tiering Matrix, Cost Attribution Strategy
 **Healthcare artifacts:** HIPAA Service Eligibility Matrix, PHI Data Flow Map, BAA Inventory, Audit Log Coverage Matrix, HITRUST Control Inheritance Matrix, De-identification Strategy, Break-the-Glass Runbook
 **GxP artifacts (when life-sciences-regulated):** GAMP 5 Service Categorization Matrix, Validation Plan (IQ/OQ/PQ), Traceability Matrix, Supplier Qualification Register, Electronic Signature Design, Change Control Record Template
 
@@ -255,16 +265,17 @@ Default save location: `docs/saas-architecture/` in workspace root.
 
 | User says... | Steering files to load | Artifacts to offer |
 |---|---|---|
-| "I'm building a [healthcare] SaaS for [segment]" | `tenancy-models.md` → `healthcare-compliance-foundations.md` → `data-partitioning.md` | Isolation Matrix, HIPAA Eligibility Matrix, PHI Data Flow Map, ADRs |
-| "Review our healthcare architecture" | `saas-lens-review.md` + `healthcare-compliance-foundations.md` | Review Report, HIPAA Eligibility Matrix |
+| "I'm building a [healthcare] SaaS for [segment]" | `tenancy-models.md` → `healthcare-compliance-foundations.md` → `data-partitioning.md` | HLD, Isolation Matrix, HIPAA Eligibility Matrix, PHI Data Flow Map, ADRs |
+| "Review our healthcare architecture" | `saas-lens-review.md` + `healthcare-compliance-foundations.md` | Review Report, HLD (if none exists), HIPAA Eligibility Matrix |
 | "How should we handle PHI isolation?" | `tenant-isolation.md` + `phi-data-handling.md` | ADR, PHI Data Flow Map |
 | "We need FHIR/HL7 integration" | `fhir-and-interop.md` | ADR for interop strategy |
 | "We're building with AI on clinical data" | `genai-and-phi.md` + `healthcare-compliance-foundations.md` | PHI Data Flow Map, ADR |
 | "We need HITRUST certification" | `healthcare-compliance-foundations.md` | HITRUST Control Inheritance Matrix |
-| "We're building a PACS / imaging platform" | `clinical-saas-and-imaging.md` + `data-partitioning.md` | Isolation Matrix, Data Partitioning Map, ADRs |
-| "We're building a claims / payer platform" | `payer-saas-patterns.md` + `fhir-and-interop.md` | ADR, Tiering Matrix |
-| "Our software is SaMD / FDA-cleared" | `clinical-saas-and-imaging.md` + `gxp-compliance-generic.md` + `resilience-and-deployment.md` | GAMP 5 Categorization, Validation Plan, Traceability Matrix, Supplier Qualification Register |
+| "We're building a PACS / imaging platform" | `clinical-saas-and-imaging.md` + `data-partitioning.md` | HLD, Isolation Matrix, Data Partitioning Map, ADRs |
+| "We're building a claims / payer platform" | `payer-saas-patterns.md` + `fhir-and-interop.md` | HLD, ADR, Tiering Matrix |
+| "Our software is SaMD / FDA-cleared" | `clinical-saas-and-imaging.md` + `gxp-compliance-generic.md` + `resilience-and-deployment.md` | HLD (GxP variant), GAMP 5 Categorization, Validation Plan, Traceability Matrix, Supplier Qualification Register |
 | "We need to comply with 21 CFR Part 11 / Annex 11" | `gxp-compliance-generic.md` + `audit-logging-and-access.md` + `identity-and-onboarding.md` | Electronic Signature Design, Audit Log Coverage Matrix, Change Control Record Template |
-| "We're building eClinical / clinical trial SaaS" | `gxp-compliance-generic.md` + `healthcare-compliance-foundations.md` + `phi-data-handling.md` | GAMP 5 Categorization, Validation Plan, Supplier Qualification Register, Audit Log Coverage Matrix |
+| "We're building eClinical / clinical trial SaaS" | `gxp-compliance-generic.md` + `healthcare-compliance-foundations.md` + `phi-data-handling.md` | HLD (GxP variant), GAMP 5 Categorization, Validation Plan, Supplier Qualification Register, Audit Log Coverage Matrix |
 | "We need validated CI/CD for a regulated release" | `resilience-and-deployment.md` + `gxp-compliance-generic.md` | Change Control Record Template, Validation Plan (for the release) |
 | "Our AI model retrains on new clinical data" | `genai-and-phi.md` + `gxp-compliance-generic.md` + `clinical-saas-and-imaging.md` | ADR for PCCP, Validation Plan, Supplier Qualification Register (for model supplier) |
+| "Give us an architecture overview" / "We need to respond to a security questionnaire" / "New engineer needs a system view" | `artifacts-saas.md` + relevant domain files | HLD |
