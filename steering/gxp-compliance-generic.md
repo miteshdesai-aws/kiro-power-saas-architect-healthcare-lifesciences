@@ -408,6 +408,63 @@ Maintain the following documentation for GxP compliance:
 | Audit Trail Retention Policy | Defines retention periods per data classification | Annual review |
 | Disaster Recovery Plan | DR procedures, RPO/RTO, escalation contacts | Annual review + post-DR-test update |
 
+## Discovery Questions for This Domain
+
+When the conversation indicates GxP applies (SaMD, eClinical, pharmacovigilance, regulated labs, pharma manufacturing, or explicit regulatory keywords), ask 1-2 at a time to establish scope before recommending architecture.
+
+**Regulatory scope:**
+- What's the GxP trigger for this system? (SaMD / clinical trials / pharmacovigilance / regulated lab / pharmaceutical manufacturing / other)
+- Which predicate rule applies? (21 CFR Part 11, EU Annex 11, other jurisdiction-specific regulation)
+- Is the system subject to FDA, EMA, MHRA, PMDA, or other health authority inspection? Which one is primary?
+- Is this a new system or an existing system being migrated to AWS? (Migration changes validation scope significantly)
+
+**Classification and scope:**
+- For SaMD: has IEC 62304 software safety classification been completed? (Class A/B/C per component)
+- Have components been categorized per GAMP 5? (Category 1/3/4/5 — determines validation effort)
+- What's the Quality Management System? (ISO 13485 for medical devices, ICH Q10 for pharma, internal QMS)
+- Is there a Risk Management File (ISO 14971) — is it current and version-controlled?
+
+**Validation current state:**
+- Is there a current Validation Plan with executed IQ/OQ/PQ protocols?
+- Is there a Traceability Matrix linking requirements → design → tests → results? Is it complete (no untraced requirements)?
+- When was the last validation summary report approved? Is it current for the deployed version?
+- Is validation done point-in-time per release, or continuously (CI/CD-qualified pipeline)?
+
+**Change control and deployment:**
+- Is the CI/CD pipeline itself qualified as a GAMP Category 4 system?
+- How are changes classified today? (Standard / Normal / Major / Emergency — or no formal classification)
+- Are release approvals captured as 21 CFR Part 11 electronic signatures, or just "approved" clicks in a tool?
+- Do you separate deployment from activation using feature flags for regulated features?
+- Is there rollback capability, and has it been tested within the validated envelope?
+
+**Electronic signatures (if applicable):**
+- What actions require electronic signatures under your predicate rules? (Report finalization, record amendment, batch release, deployment approval, clinical review)
+- Are signers re-authenticated at signing time, or relying on session validity?
+- Are signatures cryptographically bound to record content? (Modifying the record must invalidate the signature)
+- Do signatures capture signer identity + timestamp + meaning as distinct fields?
+
+**Supplier qualification:**
+- Is there a Supplier Qualification Register covering AWS and third-party components?
+- For AWS: have you retained the GxP on AWS whitepaper as qualification evidence alongside the BAA?
+- Are third-party dependencies (libraries, SaaS services in regulated paths) assessed and version-pinned?
+
+**AI/ML-specific (if applicable):**
+- Does the system include AI/ML components that fall under SaMD? (If yes, GMLP and PCCP apply)
+- For retraining AI: is there a Predetermined Change Control Plan (PCCP)?
+- Are training data and test data strictly separated with access controls and lineage documented?
+- Are prompt templates, guardrail configurations, and model versions under version control and change control?
+
+**Data integrity (ALCOA+):**
+- For regulated records: are audit trails capturing old value, new value, and reason for change on modifications?
+- Are audit logs tamper-evident (hash chains, CloudTrail log file validation)?
+- Are compute nodes NTP-synchronized with documented time sources? Is clock skew monitored?
+- What's the retention period for regulated records and audit trails? (Often longer than HIPAA's 6 years)
+
+**Organizational readiness:**
+- Is there a dedicated quality/regulatory function, or is engineering handling validation?
+- Are personnel trained on SOPs relevant to the system? Are training records retained?
+- What's the target for first regulated release — weeks, months, or already live?
+
 ## Compliance Review Checklist
 
 Before approving any design document or release for a GxP system, verify:

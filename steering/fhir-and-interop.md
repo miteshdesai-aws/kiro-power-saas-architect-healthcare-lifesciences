@@ -220,6 +220,13 @@ The FHIR Bulk Data Access specification defines how to export large datasets as 
 - Do different tenants connect to different EHR systems? (Per-tenant FHIR server configuration)
 - Do you need cross-tenant FHIR queries? (Analytics, population health — requires aggregation layer)
 
+**Data volume and sizing:**
+- What's the expected FHIR resource write rate? (Per second, per tenant at peak — affects HealthLake throughput and pool vs silo decision)
+- What's the expected FHIR resource read rate and pattern? (Point reads vs search queries — search is more expensive)
+- What's the total FHIR resource count per tenant after 1 year? (Affects HealthLake storage costs and query performance)
+- Do you need bulk data export? How large are typical exports? (A million-resource export behaves differently than a thousand-resource export)
+- For HL7 v2 ingestion: what's the message volume per tenant per day? (Affects interface engine sizing and routing strategy)
+
 ## References
 
 - [Building a Multi-Tenant FHIR Server with AWS HealthLake](https://aws.amazon.com/blogs/industries/building-a-multi-tenant-fhir-server-with-aws-healthlake/)

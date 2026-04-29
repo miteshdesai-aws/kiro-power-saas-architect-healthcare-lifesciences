@@ -317,6 +317,13 @@ When the conversation is about tenant isolation, ask these:
 - How is tenant context propagated through your stack? (JWT claims? Headers? Message attributes?)
 - For async workflows (queues, events, batch jobs) — does tenant context survive the async boundary?
 
+**JWT trust chain:**
+- Who issues the JWTs that carry tenant context? (Cognito, Auth0, Okta, custom IdP, federated from customer IdP)
+- Is the JWT signature verified at every trust boundary (API Gateway authorizer, downstream services), or is trust assumed after the edge?
+- Is the audience claim (`aud`) validated against the expected service identity?
+- Can a user modify their tenant claim in the token without detection? (If the claim is pulled from a mutable user attribute without re-verification, that's a risk)
+- For federated tenants: how do you verify the upstream IdP's tenant assertion matches your internal tenant ID? (Avoids tenant spoofing via compromised upstream IdP)
+
 **Scale:**
 - How many tenants do you have or expect? (This determines whether static IAM policies or dynamic STS policies are appropriate)
 - Do you need different isolation levels for different tiers? (Pool isolation for basic, resource-level isolation for enterprise)

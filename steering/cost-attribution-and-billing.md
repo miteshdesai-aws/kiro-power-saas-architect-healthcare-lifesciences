@@ -206,6 +206,12 @@ When the conversation is about cost attribution, billing, or metering:
 - How are limits enforced? (API Gateway usage plans? Application-level? Not at all?)
 - What should happen when a tenant exceeds their limits? (Hard block? Overage charges? Notification only?)
 
+**Healthcare metering (if applicable):**
+- Which healthcare-specific dimensions do you need to meter per tenant? (FHIR API calls to HealthLake, imaging studies stored/retrieved in HealthImaging, AI inferences through Bedrock for clinical features, EDI transactions for payer SaaS, de-identification operations)
+- For HealthLake shared data store (pool model): how do you apportion storage and request costs across tenants? (By resource count, by request volume, by tenant tag)
+- For clinical AI costs: are you using Bedrock Application Inference Profiles per tenant or per tier?
+- Do any tenants require detailed cost transparency reports? (Enterprise health systems often ask for per-service cost breakdowns as part of the BAA or vendor review)
+
 ## References
 
 - [SaaS Lens — Expenditure Awareness](https://docs.aws.amazon.com/wellarchitected/latest/saas-lens/expenditure-awareness.html)

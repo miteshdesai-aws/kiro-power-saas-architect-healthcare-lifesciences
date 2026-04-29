@@ -284,6 +284,13 @@ When the conversation is about API design, networking, or tenant routing:
 - If caching API responses: is tenant context included in the cache key? (Critical for preventing cross-tenant data leaks)
 - Do tenants need geo-specific content delivery or geo-restrictions?
 
+**Healthcare networking (if applicable):**
+- Do you need to support DICOM ingestion from hospital modalities or PACS? If yes, which protocols — DICOMweb (STOW-RS/WADO-RS/QIDO-RS over HTTPS) only, DIMSE (TCP, legacy), or both?
+- For DIMSE: you'll need Network Load Balancer routing and likely VPN or Direct Connect from hospital sites. What connectivity do hospital sites have today?
+- Do enterprise health system tenants require PrivateLink? (No public internet traversal is common in healthcare security policies)
+- Do you have high-volume imaging sites that need AWS Direct Connect (> 50 GB/day)? Which sites, and at what bandwidth?
+- For FHIR endpoints: do different tenants need to be reachable at different endpoints (per-tenant subdomains or custom domains for white-label), or is a single endpoint with tenant routing in JWT acceptable?
+
 ## References
 
 - [Building Multi-Tenant API Gateway Solutions](https://aws.amazon.com/blogs/apn/building-multi-tenant-api-gateway-solutions/)

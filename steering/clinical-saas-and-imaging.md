@@ -346,6 +346,7 @@ The tension between SaaS velocity and GxP validation is solvable with a validate
 - Do you provide a viewer? (Zero-footprint browser, thick client, both?)
 - Do you need 3D rendering / advanced visualization? (GPU requirements)
 - What are the latency requirements for image display? (Sub-second for radiology workflow)
+- Who's the primary clinical end-user? (Radiologist, pathologist, cardiologist, surgeon, general clinician — workflow expectations, hanging protocols, and integration requirements differ significantly by specialty)
 
 **AI/FDA:**
 - Does your software include AI-assisted clinical features? (Detection, triage, measurement, diagnosis?)
