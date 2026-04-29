@@ -12,6 +12,9 @@ Default save location: `docs/saas-architecture/` in the workspace root.
 
 ## Healthcare Artifact Relationships
 
+**High-Level Design (HLD) ↔ Everything:**
+The HLD is the top-level synthesis artifact defined in `artifacts-saas.md`. For healthcare SaaS, the HLD is where the regulatory scope, PHI handling approach, and compliance posture are summarized before detail artifacts dig deeper. For GxP-regulated healthcare SaaS, use the HLD's **GxP variant** (see `artifacts-saas.md` Artifact 2) which adds sections for IEC 62304 safety classification, GAMP 5 categorization summary, validation scope, and change control. The GxP-variant HLD serves as the "System Description" document required by `gxp-compliance-generic.md`. Every healthcare artifact in this file should be referenced from the HLD and, in turn, reference back to the HLD as the parent system document.
+
 **HIPAA Service Eligibility Matrix ↔ Tenant Isolation Matrix:**
 The eligibility matrix validates that every AWS service in the isolation matrix is HIPAA-eligible. Generate them together or eligibility matrix first. If the isolation matrix references a non-eligible service for PHI, flag it immediately.
 
