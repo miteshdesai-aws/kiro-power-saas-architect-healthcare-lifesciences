@@ -30,6 +30,9 @@ The Review Report may reference gaps that other artifacts would fill. For exampl
 **High-Level Design ↔ Everything:**
 The HLD is the top-level synthesis artifact. It references every other artifact for detail rather than duplicating content. Generate the HLD early to establish the system view, then produce detail artifacts (Isolation Matrix, PHI Flow Map, ADRs, etc.) to deepen specific sections. When an HLD exists in the workspace, every other artifact should cross-reference it so readers can navigate from system view to detail and back.
 
+**High-Level Design ↔ Low-Level Design (LLD):**
+The HLD lists components at one paragraph each; each significant component gets its own LLD. LLDs are deeper, per-component design documents covering internal structure, public API contracts, data model, algorithms, sequence diagrams, tenant isolation implementation, audit event emission, and (for GxP) requirement-to-test traceability. The HLD is the doorway; each LLD is the room. Always generate the HLD before any LLD so the component has its system context. See `artifacts-lld.md` for the full LLD template and readiness rules — this file carries only the pointer entry (Artifact 9 below).
+
 **General rule:** When generating an artifact and a related artifact already exists in the workspace, read it first and reference it rather than duplicating content. If the existing artifact is outdated based on the current conversation, offer to update it.
 
 
@@ -410,6 +413,7 @@ The HLD is the synthesis document. Always reference, never duplicate:
 - **Audit Log Coverage Matrix** — HLD references audit approach; Audit Matrix has per-event-type detail
 - **ADRs** — HLD has a decision index; each ADR has the full rationale
 - **Data Partitioning Map** — HLD references storage approach; Data Partitioning Map has per-service key design and backup strategy
+- **Low-Level Designs (LLDs)** — HLD lists components at one paragraph each; each significant component has its own LLD (`artifacts-lld.md`) covering internal structure, API contracts, data model, algorithms, sequence diagrams, tenant isolation implementation, and (for GxP) traceability
 - **For GxP:** HLD summarizes safety class and GAMP 5 categorization; full matrices have per-component detail
 
 **Updating the HLD:** When a specialized artifact is generated or updated, check whether the HLD needs to be updated to reflect the new detail. The HLD is a living document — offer to update it when architecture decisions change.
@@ -768,7 +772,77 @@ Generate a per-service breakdown of storage decisions.
 - When the user asks about measuring cost per tenant
 
 
-## Artifact Readiness: Progressive Discovery
+## Artifact 9: Low-Level Design (LLD)
+
+The LLD is the component-level design document — one per significant component listed in the HLD. Where the HLD answers "what does the whole system look like?", an LLD answers "how is *this component* built?"
+
+**Think of it this way:** HLD is the doorway. Each LLD is the room behind a specific door. A healthcare SaaS typically has 10-20 LLDs across its services (Patient Service, FHIR Ingestion Pipeline, Imaging Orchestrator, Consent Service, etc.) — each a focused document that a developer reads before writing code, and a reviewer reads to verify the code matches intent.
+
+**This entry is a pointer.** The full LLD template, GxP variant (IEC 62304 safety class, GAMP 5 categorization, traceability, electronic signatures, formal approval), readiness rules, relationships to every upstream artifact, and naming conventions all live in `artifacts-lld.md`. Load that file whenever the user asks for component-level design.
+
+### What an LLD Covers
+
+- **Purpose and scope** of the component + parent context inherited from the HLD (segment, regulatory scope, tenancy model, GAMP 5 category if GxP)
+- **Internal structure** — modules/classes with responsibilities and a Mermaid diagram
+- **Public API contract** — endpoints, request/response schemas, errors, idempotency, rate limits, SLA; or events consumed/published
+- **Data model** — schema, access patterns, PHI field-level handling, caching
+- **Key interactions** — sequence diagrams for the flows that touch PHI, span services, or have non-trivial error handling
+- **Tenant isolation implementation** — context propagation, IAM session policies, repository-layer assertions, isolation failure modes
+- **Algorithms and business logic** — pseudocode for non-trivial logic (consent evaluation, idempotency, retry/backoff)
+- **Error handling and resilience** — error taxonomy, retry strategy, circuit breaker, saga compensation
+- **Security and compliance implementation** — PHI handling, authN/authZ, audit events emitted, electronic signatures (GxP)
+- **Observability** — structured logging, per-tenant metrics, traces
+- **Scaling and performance budget** — expected load, noisy-neighbor handling, p50/p99 targets
+- **Testing strategy** — unit, integration, contract, tenant isolation, performance
+- **Deployment** — IaC path, rollout strategy, runbook references, configuration
+- **Dependencies** — internal components, AWS services, third-party libraries
+- **GxP additions** — IEC 62304 safety class, GAMP 5 categorization with IQ/OQ/PQ scope, traceability (URS → design → test), change control, e-signature design, formal approval signatures
+
+### When to Generate
+
+- A new component is being added and needs design before code is written
+- An existing component is being substantially refactored
+- A GxP-regulated component needs a Design Specification (DS) for validation evidence
+- A new engineer is taking ownership of a component and needs to understand how it works internally
+- Security or compliance review needs component-level detail (consent enforcement, PHI handling, audit emission)
+- The HLD describes a component at one paragraph, but the team needs implementation decisions that aren't obvious from the HLD
+
+Do **not** generate an LLD for:
+- Trivial glue code or one-function Lambdas fully described by their IaC and a one-line purpose
+- Components that are pure configuration of a managed service with no custom logic (document in Data Partitioning Map or HLD instead)
+- Third-party components the team doesn't own
+
+### Prerequisites
+
+- **HLD must exist** (or be generated alongside). An LLD without an HLD has no context for its constraints.
+- Component must appear in the HLD's Components and Responsibilities table under the name used in the LLD filename.
+- For GxP components: GAMP 5 category assigned and IEC 62304 safety class complete.
+
+### Readiness Requires
+
+See `artifacts-lld.md` "Readiness Requires" section for the full checklist. At minimum: HLD exists, component identified, component responsibility clear, public API shape known, primary data store chosen, tenancy model decided, authN/authZ model decided, PHI handling known (if applicable), audit events known.
+
+### Relationship to Other Artifacts
+
+LLDs reference upward — they never re-derive decisions from higher artifacts:
+- **HLD** — for system context, segment, regulatory scope, account structure
+- **Tenant Isolation Matrix** — for the component's tenancy model and isolation mechanism
+- **Data Partitioning Map** — for storage-level key design
+- **PHI Data Flow Map** — for the PHI flow hops this component participates in
+- **ADRs** — for decisions with broader rationale
+- **Audit Log Coverage Matrix** — bi-directional; events emitted by the LLD must appear in the matrix
+- **GAMP 5 Matrix, Validation Plan, Traceability Matrix** — for GxP components
+
+When an LLD and another artifact disagree, the LLD loses — the higher artifacts are authoritative.
+
+### Naming Convention
+
+- `docs/saas-architecture/lld/{component-name}.md` (kebab-case, match the HLD Components table entry)
+- For GxP components under formal change control, version the filename per release: `lld/{component-name}-v1.2.md`
+
+### See Also
+
+Full template, GxP variant, detailed readiness rules, and usage guidance: `artifacts-lld.md`.
 
 These rules apply to **all** artifacts — SaaS and healthcare. The healthcare artifacts in `artifacts-healthcare.md` inherit these rules.
 
@@ -791,6 +865,18 @@ These rules apply to **all** artifacts — SaaS and healthcare. The healthcare a
 - AWS services selected (at least primary compute, storage, identity)
 - Account structure decided
 - For GxP variant: IEC 62304 classification complete, GAMP 5 categorization approach agreed
+
+**Low-Level Design (LLD)** requires (full checklist in `artifacts-lld.md`):
+- HLD exists in the workspace — or is being generated alongside (non-negotiable prerequisite)
+- Component identified in the HLD's Components and Responsibilities table
+- Component responsibility is clear — one paragraph the owner can stand behind
+- Public API shape known — endpoints/events and their purposes (schemas can be refined during drafting)
+- Primary data store chosen (from Data Partitioning Map or decidable alongside)
+- Tenancy model for the component known (from Tenant Isolation Matrix)
+- AuthN/authZ model decided — identity pattern, consent enforcement responsibility, break-the-glass applicability
+- PHI handling (if applicable) — which fields are PHI, encryption approach, log redaction strategy
+- Audit events the component emits and their retention
+- For GxP variant: IEC 62304 safety class complete, GAMP 5 category assigned, URS/FS available for traceability
 
 **Tenant Isolation Matrix** requires:
 - List of services/microservices in the system
@@ -874,6 +960,7 @@ If you check readiness and find gaps:
 ### Naming Convention
 
 - HLD: `docs/saas-architecture/high-level-design.md` (or `high-level-design-{version}.md` for versioned releases)
+- LLDs: `docs/saas-architecture/lld/{component-name}.md` (one file per component; see `artifacts-lld.md`)
 - ADRs: `docs/saas-architecture/adr/ADR-001-{title}.md`
 - Isolation Matrix: `docs/saas-architecture/tenant-isolation-matrix.md`
 - Review Report: `docs/saas-architecture/saas-lens-review-{date}.md`

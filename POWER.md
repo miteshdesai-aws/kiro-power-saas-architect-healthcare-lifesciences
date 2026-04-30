@@ -101,6 +101,7 @@ If you're unsure whether GxP applies, ask one clarifying question: "Does your so
 | Generate SaaS artifacts (HLD, Isolation Matrix, ADR, Onboarding, Tiering, Cost) | `artifacts-saas.md` |
 | Generate healthcare artifacts (HIPAA Eligibility, PHI Flow, BAA, Audit, HITRUST, De-ID, Break-the-Glass) | `artifacts-healthcare.md` (also load `artifacts-saas.md` for shared readiness rules) |
 | Generate GxP artifacts (GAMP 5 Categorization, Validation Plan, Traceability Matrix, Supplier Qualification, E-Signature Design, Change Control) | `artifacts-healthcare.md` + `gxp-compliance-generic.md` |
+| Generate Low-Level Design (component-level design, APIs, data model, algorithms, sequence diagrams, tenant isolation implementation) | `artifacts-lld.md` (also load `artifacts-saas.md` for HLD context and shared readiness rules; add `gxp-compliance-generic.md` for regulated components) |
 | HIPAA, BAA, HITRUST, state laws, 42 CFR Part 2, regulatory | `healthcare-compliance-foundations.md` |
 | GxP, 21 CFR Part 11, EU Annex 11, GAMP 5, IEC 62304, ISO 13485, ALCOA+, validation, SaMD validation, eClinical, pharmacovigilance | `gxp-compliance-generic.md` (manual — load explicitly for GxP systems) |
 | PHI encryption, de-identification, tokenization, Comprehend Medical, Macie | `phi-data-handling.md` |
@@ -143,7 +144,8 @@ After key decisions, proactively offer to generate ONE artifact at a time. Wait 
 2. Then offer foundational detail artifacts: **Tenant Isolation Matrix** and **HIPAA Service Eligibility Matrix**.
 3. Then dependent artifacts as context grows: **PHI Data Flow Map**, **Onboarding Flow**, **Data Partitioning Map**, **Audit Log Coverage Matrix**, **BAA Inventory**.
 4. Generate **ADRs** as significant decisions get made throughout the conversation; each ADR is referenced from the HLD's decision index.
-5. For GxP systems: after HLD, add **GAMP 5 Service Categorization Matrix**, then **Validation Plan**, **Traceability Matrix**, **Supplier Qualification Register**, **Electronic Signature Design**, **Change Control Record Template** as applicable.
+5. Offer **LLDs per significant component** when the team is about to implement or refactor a component, or when a GxP-regulated component needs a Design Specification. LLDs require the HLD as prerequisite — never generate an LLD without (or before) the HLD. Load `artifacts-lld.md` when generating.
+6. For GxP systems: after HLD, add **GAMP 5 Service Categorization Matrix**, then **Validation Plan**, **Traceability Matrix**, **Supplier Qualification Register**, **Electronic Signature Design**, **Change Control Record Template** as applicable.
 
 If the customer jumps straight to a detail artifact ("can you generate the isolation matrix?"), produce that — but note that an HLD is the natural parent document and offer it as the next step.
 
@@ -235,7 +237,7 @@ flowchart LR
 
 **Never batch-generate multiple artifacts.** Each one deserves the customer's attention and may need adjustment before the next one builds on it.
 
-**SaaS artifacts:** High-Level Design (HLD), Tenant Isolation Matrix, ADR, SaaS Lens Review Report, Onboarding Flow, Data Partitioning Map, Tiering Matrix, Cost Attribution Strategy
+**SaaS artifacts:** High-Level Design (HLD), Low-Level Design (LLD, per component), Tenant Isolation Matrix, ADR, SaaS Lens Review Report, Onboarding Flow, Data Partitioning Map, Tiering Matrix, Cost Attribution Strategy
 **Healthcare artifacts:** HIPAA Service Eligibility Matrix, PHI Data Flow Map, BAA Inventory, Audit Log Coverage Matrix, HITRUST Control Inheritance Matrix, De-identification Strategy, Break-the-Glass Runbook
 **GxP artifacts (when life-sciences-regulated):** GAMP 5 Service Categorization Matrix, Validation Plan (IQ/OQ/PQ), Traceability Matrix, Supplier Qualification Register, Electronic Signature Design, Change Control Record Template
 
@@ -279,3 +281,5 @@ Default save location: `docs/saas-architecture/` in workspace root.
 | "We need validated CI/CD for a regulated release" | `resilience-and-deployment.md` + `gxp-compliance-generic.md` | Change Control Record Template, Validation Plan (for the release) |
 | "Our AI model retrains on new clinical data" | `genai-and-phi.md` + `gxp-compliance-generic.md` + `clinical-saas-and-imaging.md` | ADR for PCCP, Validation Plan, Supplier Qualification Register (for model supplier) |
 | "Give us an architecture overview" / "We need to respond to a security questionnaire" / "New engineer needs a system view" | `artifacts-saas.md` + relevant domain files | HLD |
+| "We need a component-level design" / "Document the {service} internals" / "Design spec for {component} before we build it" | `artifacts-lld.md` + relevant domain files (`phi-data-handling.md`, `tenant-isolation.md`, `fhir-and-interop.md`, etc.) | LLD for the specific component |
+| "We need a Design Specification (DS) for a GxP component / SaMD validation evidence" | `artifacts-lld.md` + `gxp-compliance-generic.md` + relevant domain files | LLD (GxP variant), Traceability Matrix update |
