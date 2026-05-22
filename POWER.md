@@ -1,9 +1,8 @@
 ---
 name: "saas-architect-for-healthcare-aws"
 displayName: "SaaS Architect for Healthcare on AWS"
-description: "AI co-architect for multi-tenant healthcare SaaS on AWS — tenancy, PHI isolation, FHIR, HIPAA/HITRUST, and Well-Architected reviews."
+description: "AI co-architect for multi-tenant healthcare SaaS on AWS — tenancy, PHI isolation, FHIR, HIPAA/HITRUST, GxP/SaMD/life-sciences regulation support and Well-Architected reviews."
 keywords: ["healthcare", "hipaa", "phi", "fhir", "healthlake", "healthimaging", "dicom", "hitrust", "telehealth", "patient portal", "ehr", "medical imaging", "claims", "payer", "rcm", "clinical", "smart on fhir", "baa", "hl7", "42 cfr part 2", "samd", "gxp", "21 cfr part 11", "annex 11", "gamp 5", "iec 62304", "validation", "electronic signature", "iq oq pq", "eclinical", "pharmacovigilance", "pccp"]
-version: "1.0.0"
 author: "Mitesh Desai, Anand Jumnani"
 ---
 
@@ -283,3 +282,8 @@ Default save location: `docs/saas-architecture/` in workspace root.
 | "Give us an architecture overview" / "We need to respond to a security questionnaire" / "New engineer needs a system view" | `artifacts-saas.md` + relevant domain files | HLD |
 | "We need a component-level design" / "Document the {service} internals" / "Design spec for {component} before we build it" | `artifacts-lld.md` + relevant domain files (`phi-data-handling.md`, `tenant-isolation.md`, `fhir-and-interop.md`, etc.) | LLD for the specific component |
 | "We need a Design Specification (DS) for a GxP component / SaMD validation evidence" | `artifacts-lld.md` + `gxp-compliance-generic.md` + relevant domain files | LLD (GxP variant), Traceability Matrix update |
+
+## Support & Legal
+
+- **License**: Apache-2.0 License
+- **Support**: mbdesai@amazon.com, ajumnani@amazon.com
